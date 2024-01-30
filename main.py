@@ -13,6 +13,7 @@ from keras.regularizers import l1, l2
 from keras.optimizers import Adam
 from keras.losses import binary_crossentropy
 from skimage.transform import resize
+from keras.losses import SparseCategoricalCrossentropy
 
 from sklearn.model_selection import KFold
 
@@ -76,7 +77,7 @@ X_dataresized = np.empty((3*N,128,128,1))
 y_dataresized = np.empty((3*N,128,128,1))
 
 # Creazione X_dataresized
-X_dataresize=resize_images(X_data, target_size,iteratore,N)
+X_dataresize=resize_images(X_data, target_size,iteratore,3*N)
 print(X_dataresized.shape)
 
 '''
@@ -89,7 +90,7 @@ plt.show()
 '''
 
 # Creazione y_dataresized
-y_dataresized=resize_images(y_data, target_size,iteratore,N)
+y_dataresized=resize_images(y_data, target_size,iteratore,3*N)
 print(y_dataresized.shape)
 
 '''
@@ -101,96 +102,68 @@ plt.axis('off')
 plt.show()
 '''
 
-
-# DICE coefficient
-dice_c = dice_coef(y_true, y_pred, smooth=0)
-'''
-def dice_coef(y_true, y_pred, smooth=0):
-  y_true_f = tf.reshape(tf.cast(y_true, tf.float32),
-                        [-1])
-  y_pred_f = tf.reshape(tf.cast(y_pred, tf.float32), [-1])
-  return (2 * tf.reduce_sum(y_true_f * y_pred_f) + smooth) / (
-            tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
-'''
-
-loss_d= dice_loss(y_true, y_pred):
-
-'''
-'''
-def easy_cnn(input_shape):
-    model = Sequential()
-
-    model.add(Conv2D(32, kernel_size=(3, 3), input_shape=input_shape, kernel_regularizer=l2(), padding='same'))
-    
-    model.add(BatchNormalization()) 
-    model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2))) 
-    
-    model.add(Conv2D(64, kernel_size=(3, 3), kernel_regularizer=l2(), padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-
-  
-    model.add(Conv2D(64, kernel_size=(3, 3), kernel_regularizer=l2(), padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    model.add(UpSampling2D(size=(2, 2)))
-
-    model.add(Conv2D(32, kernel_size=(3, 3), kernel_regularizer=l2(), padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    model.add(UpSampling2D(size=(2, 2)))
-
-    model.add(Conv2D(1, kernel_size=(1, 1), activation='softmax', padding='same'))
-    
-    return model
-
+# Creazione del modello
 model = easy_cnn(X_dataresized.shape[1:])
 
-model.compile(optimizer=Adam(0.001), loss=dice_loss, metrics=['accuracy'])
+model.compile(optimizer=Adam(0.001), loss=binary_crossentropy, metrics=['accuracy'])
 
 #Print the summary of the model architecture
 model.summary()
 
-def cross_valid(model_fun,N_folds,data,masks,loss,names):
-    N_folds = 10  # Numero di fold desiderati
-    kf = KFold(n_splits=N_folds, shuffle=True)
-
-    results = []
-    for f, (train_index, test_index) in enumerate(kf.split(X_dataresized)):
-        scores = np.empty(len(test_index))
-
-        testData = X_dataresized[test_index, :, :, :]
-        testMasks = y_dataresized[test_index, :, :, :]
-        trainData, trainMasks =shuffle( X_dataresized[train_index, :, :, :],y_dataresized[train_index, :, :, :])
-
-        model = model_fun(X_dataresized.shape[1:])
-        model.compile(optimizer=Adam(0.001), loss=binary_crossentropy, metrics=['accuracy'])
-
-        history = model.fit(trainData, trainMasks, batch_size=128, epochs=10, validation_split=0.1,verbose=1)
-
-        for n in range(len(test_index)):
-            est_mask = np.squeeze(model.predict(testData[n, :, :, :][None, ...]) > 0.7)
-            scores[n] = dice_loss(tf.convert_to_tensor(testMasks[n, :, :, 0].astype(np.float32)),tf.convert_to_tensor(est_mask.astype(np.float32)))
-
-        results.append(np.mean(scores))
-        print("**********")
-        print(np.mean(scores))
-        print("**********")
-        del model, trainData, trainMasks, testData, testMasks, est_mask, history
-   # print(f"Fold {f + 1}, Mean Dice Score: {np.mean(scores)}")
-
-# Restituisci la lista delle performance medie su tutti i fold
-    return results
 
 N_folds = 10
-
 hyperparams = {
     "batch_size":128,
     "epochs":10,
     "validation_split":0.1,
 }
-results = cross_valid(easy_cnn,N_folds,X_dataresized,y_dataresized,dice_coef,hyperparams)
-'''
+results = cross_valid(model,N_folds,X_dataresized,y_dataresized,dice_coef,hyperparams)
 
+nclassi = 3
+COVID=np.zeros(N)
+Normal=np.ones(N)
+ViralPneumonia=2*np.ones(N)
+etichette = np.concatenate((COVID,Normal,ViralPneumonia),axis=0)
+
+'''
+def cross_valid(model_fun, N_folds, data, masks, loss, names):
+  N_folds = 10
+  kf = KFold(n_splits=N_folds, shuffle=True)
+
+  results = []
+  for f, (dev_index, test_index) in enumerate(kf.split(data)):
+    testData = data[test_index, :, :, :]
+    testEtic = etichette[test_index, :, :, :]
+    devData= data[dev_index,:,:,:]
+    devEtic= etichette[dev_index,:,:,:]
+    for g, (t_index,val_index) in enumerate(kf.split(devData)):
+      tData= devData[t_index,:,:,:]
+      tEtic= etichette[t_index,:,:,:]
+      valData = devData[val_index, :, :, :]
+      valEtic = etichette[val_index, :, :, :]
+      
+      valData, valEtic = shuffle(devData[val_index, :, :, :], etichette[val_index, :, :, :])
+
+
+    dice_c = np.empty(len(test_index))
+
+    
+
+    trainData, trainMasks = shuffle(data[dev_index, :, :, :], masks[train_index, :, :, :])
+
+    model = model_fun(data.shape[1:])
+    model.compile(optimizer=Adam(0.001), loss=binary_crossentropy, metrics=['accuracy'])
+
+    history = model.fit(trainData, trainMasks, batch_size=h["batch_size"], epochs=h["epochs"],
+                        validation_split=h["validation_split"], verbose=1)
+
+    for n in range(len(test_index)):
+      est_mask = np.squeeze(model.predict(testData[n, :, :, :][None, ...]) > 0.7)
+      dice_c[n] = dice_coef(tf.convert_to_tensor(testMasks[n, :, :, 0].astype(np.float32)),
+                            tf.convert_to_tensor(est_mask.astype(np.float32)))
+
+    results.append(np.mean(dice_c))
+    print(np.mean(dice_c))
+    del model, trainData, trainMasks, testData, testMasks, est_mask, history
+  return results
+'''
