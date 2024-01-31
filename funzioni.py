@@ -3,13 +3,14 @@ from tqdm import tqdm
 from skimage.transform import resize
 import tensorflow as tf
 from keras import Sequential
-from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, BatchNormalization, Activation, Add, Concatenate
+from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, BatchNormalization, Activation, Dense, Flatten
 from keras.regularizers import l1, l2
 from sklearn.utils import shuffle
 from keras.optimizers import Adam
 from keras.losses import binary_crossentropy, sparse_categorical_crossentropy
 from sklearn.model_selection import KFold
 from sklearn.metrics import accuracy_score,precision_score,recall_score
+
 
 def resize_images(X_data, target_size:tuple,iteratore:list, N:int):
     X_dataresized = np.empty((N, target_size[0], target_size[1], 1))
@@ -53,9 +54,20 @@ def easy_cnn(input_shape):
     model.add(Activation('relu'))
     model.add(UpSampling2D(size=(2, 2)))
 
-    model.add(Conv2D(1, kernel_size=(1, 1), activation='softmax', padding='same'))
+    model.add(Conv2D(1, kernel_size=(1, 1), activation='sigmoid', padding='same'))
 
     return model
+def classification_cnn(input_shape):
+    model_c = Sequential()
+    model_c.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model_c.add(MaxPooling2D(pool_size=(2, 2)))
+    model_c.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+    model_c.add(MaxPooling2D(pool_size=(2, 2)))
+    model_c.add(Flatten())
+    model_c.add(Dense(256, activation='relu'))
+    model_c.add(Dense(128, activation='relu'))
+    model_c.add(Dense(3, activation='softmax'))
+    return model_c
 
 def cross_valid(model_fun,N_folds,data,masks,h):
 
@@ -77,55 +89,55 @@ def cross_valid(model_fun,N_folds,data,masks,h):
 
         for n in range(len(test_index)):
             est_mask = np.squeeze(model.predict(testData[n, :, :, :][None, ...]) > 0.7)
-            dice_c[n] = dice_loss(tf.convert_to_tensor(testMasks[n, :, :, 0].astype(np.float32)),tf.convert_to_tensor(est_mask.astype(np.float32)))
+            dice_c[n] = dice_coef(tf.convert_to_tensor(testMasks[n, :, :, 0].astype(np.float32)),tf.convert_to_tensor(est_mask.astype(np.float32)))
 
         results.append(np.mean(dice_c))
         print(np.mean(dice_c))
+        print ('f=',f+1)
         del model, trainData, trainMasks, testData, testMasks, est_mask
     return results
 
 
 def Ncross_valid(model_fun, data, masks):
-    
-    kf_out = KFold(n_splits=3, shuffle=True)
-    kf_in = KFold(n_splits=3, shuffle=True)
-    results = []
+
+    kf_out = KFold(n_splits=2, shuffle=True)
+    kf_in = KFold(n_splits=2, shuffle=True)
+    risultato = []
     for f, (dev_index, test_index) in enumerate(kf_out.split(data)):
         testData = data[test_index, :, :, :]
-        testEtic = masks[test_index, :, :, :]
-        devData = data[dev_index, :, :, :]
-        devEtic = masks[dev_index, :, :, :]
+        testEtic = masks[test_index]
+        devData, devEtic = shuffle(data[dev_index, :, :, :],masks[dev_index])
         for i, (t_index, val_index) in enumerate(kf_in.split(devData)):
+            print('i=', i + 1)
             tData = devData[t_index, :, :, :]
-            tEtic = devEtic[t_index, :, :, :]
-            valData, valEtic = shuffle(devData[val_index, :, :, :],devEtic[val_index, :, :, :])
+            tEtic = devEtic[t_index]
+            valData, valEtic = shuffle(devData[val_index, :, :, :],devEtic[val_index])
 
             h_params = {'learning_rate': [0.001, 0.01, 0.1]}
             acc_best = 0
             for g in h_params['learning_rate']:
+                print('g=', g)
                 model = model_fun(tData.shape[1:])
-            
+
                 model.compile(optimizer=Adam(g), loss=sparse_categorical_crossentropy, metrics=['accuracy'])
                 b_size = {'B_size': [64, 128]}
-                for k in b_size['Batch_size']:
-            
-                    model.fit(tData, tEtic, batch_size=k, epochs=10, validation_split=0.1,verbose=1)
+                for k in b_size['B_size']:
+
+                    model.fit(tData, tEtic, batch_size=k, epochs=1, validation_split=0.1,verbose=1)
                     score = model.evaluate(valData, valEtic, verbose=0)
 
                     if score[1]> acc_best:
                         acc_best = score[1]
                         best_params = {'learning_rate': g, 'batch_size': k}
                         print('Accuracy_best:', acc_best,'Best params: ', best_params)
-                        
-        model = model_fun(tData.shape[1:])
-        model.compile(optimizer=Adam(best_params['learning_rate']), loss=sparse_categorical_crossentropy, metrics=['accuracy']) 
-        model.fit(testData, testEtic, batch_size=best_params['batch_size'], epochs=10, validation_split=0.1,verbose=1)
-        score = model.evaluate(devData, devEtic, verbose=0)
-        # precision = precision_score(devEtic, model.predict(devData))
-        # recall = recall_score(devEtic, model.predict(devData))
-        # results.append(score[1],precision,recall)
-        results.append(score[1])
-    return results
 
-         
-            
+        model = model_fun(devData.shape[1:])
+        model.compile(optimizer=Adam(best_params['learning_rate']), loss=sparse_categorical_crossentropy, metrics=['accuracy'])
+        model.fit(devData, devEtic, batch_size=best_params['batch_size'], epochs=1, validation_split=0.1,verbose=1)
+
+        score = model.evaluate(testData, testEtic, verbose=0)
+        risultato[0] = risultato.append (accuracy_score(testEtic, model.predict(testData)))
+        risultato[1] = risultato.append (precision_score(testEtic, model.predict(testData)))
+        risultato[2] = risultato.append (recall_score(testEtic, model.predict(testData)))
+
+    return risultato
