@@ -116,7 +116,7 @@ hyperparams = {
     "validation_split":0.1,
 }
 
-results = cross_valid(easy_cnn,N_folds,X_dataresized,y_dataresized,binary_crossentropy,hyperparams)
+results = cross_valid(easy_cnn,N_folds,X_dataresized,y_dataresized,hyperparams)
 ''' 
 nclassi = 3
 COVID=np.zeros(N)
