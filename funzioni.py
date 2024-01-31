@@ -2,14 +2,13 @@ import numpy as np
 from tqdm import tqdm
 from skimage.transform import resize
 import tensorflow as tf
-from keras import Sequential       # for sequential API
-from keras.models import Model     # for functional API
+from keras import Sequential
 from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, BatchNormalization, Activation, Add, Concatenate
 from keras.regularizers import l1, l2
+from sklearn.utils import shuffle
 from keras.optimizers import Adam
 from keras.losses import binary_crossentropy
 from sklearn.model_selection import KFold
-from sklearn.utils import shuffle
 
 def resize_images(X_data, target_size:tuple,iteratore:list, N:int):
     X_dataresized = np.empty((N, target_size[0], target_size[1], 1))
@@ -20,8 +19,7 @@ def resize_images(X_data, target_size:tuple,iteratore:list, N:int):
     return X_dataresized
 
 def dice_coef(y_true, y_pred, smooth=0):
-  y_true_f = tf.reshape(tf.cast(y_true, tf.float32),
-                        [-1])
+  y_true_f = tf.reshape(tf.cast(y_true, tf.float32),[-1])
   y_pred_f = tf.reshape(tf.cast(y_pred, tf.float32), [-1])
   return (2 * tf.reduce_sum(y_true_f * y_pred_f) + smooth) / (
             tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
@@ -57,8 +55,9 @@ def easy_cnn(input_shape):
     model.add(Conv2D(1, kernel_size=(1, 1), activation='softmax', padding='same'))
 
     return model
-def cross_valid(model_fun,N_folds,data,masks,loss,h):
-    N_folds = 10  # Numero di fold desiderati
+
+def cross_valid(model_fun,N_folds,data,masks,loss,names):
+    N_folds = 10
     kf = KFold(n_splits=N_folds, shuffle=True)
 
     results = []
@@ -67,25 +66,19 @@ def cross_valid(model_fun,N_folds,data,masks,loss,h):
 
         testData = data[test_index, :, :, :]
         testMasks = masks[test_index, :, :, :]
+
         trainData, trainMasks =shuffle( data[train_index, :, :, :],masks[train_index, :, :, :])
 
         model = model_fun(data.shape[1:])
         model.compile(optimizer=Adam(0.001), loss=binary_crossentropy, metrics=['accuracy'])
 
-        history = model.fit(trainData, trainMasks, batch_size=h["batch_size"], epochs=h["epochs"], validation_split=h["validation_split"], callbacks=h["callbacks"])
+        history = model.fit(trainData, trainMasks, batch_size=h["batch_size"], epochs=h["epochs"], validation_split=h["validation_split"],verbose=1)
 
         for n in range(len(test_index)):
             est_mask = np.squeeze(model.predict(testData[n, :, :, :][None, ...]) > 0.7)
             dice_c[n] = dice_coef(tf.convert_to_tensor(testMasks[n, :, :, 0].astype(np.float32)),tf.convert_to_tensor(est_mask.astype(np.float32)))
 
         results.append(np.mean(dice_c))
-        print("**********")
         print(np.mean(dice_c))
-        print("**********")
         del model, trainData, trainMasks, testData, testMasks, est_mask, history
-   # print(f"Fold {f + 1}, Mean Dice Score: {np.mean(scores)}")
-
-# Restituisci la lista delle performance medie su tutti i fold
     return results
-
-
