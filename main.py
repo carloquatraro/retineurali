@@ -77,7 +77,7 @@ X_dataresized = np.empty((3*N,128,128,1))
 y_dataresized = np.empty((3*N,128,128,1))
 
 # Creazione X_dataresized
-X_dataresize=resize_images(X_data, target_size,iteratore,3*N)
+X_dataresized=resize_images(X_data, target_size,iteratore,3*N)
 print(X_dataresized.shape)
 
 '''
@@ -105,8 +105,6 @@ plt.show()
 # Creazione del modello
 model = easy_cnn(X_dataresized.shape[1:])
 
-model.compile(optimizer=Adam(0.001), loss=binary_crossentropy, metrics=['accuracy'])
-
 #Print the summary of the model architecture
 model.summary()
 
@@ -117,39 +115,25 @@ hyperparams = {
     "epochs":10,
     "validation_split":0.1,
 }
-results = cross_valid(model,N_folds,X_dataresized,y_dataresized,dice_coef,hyperparams)
 
+results = cross_valid(easy_cnn,N_folds,X_dataresized,y_dataresized,binary_crossentropy,hyperparams)
+''' 
 nclassi = 3
 COVID=np.zeros(N)
 Normal=np.ones(N)
 ViralPneumonia=2*np.ones(N)
 etichette = np.concatenate((COVID,Normal,ViralPneumonia),axis=0)
+'''
+
+
+
+
+
+
+
+
 
 '''
-def cross_valid(model_fun, N_folds, data, masks, loss, names):
-  N_folds = 10
-  kf = KFold(n_splits=N_folds, shuffle=True)
-
-  results = []
-  for f, (dev_index, test_index) in enumerate(kf.split(data)):
-    testData = data[test_index, :, :, :]
-    testEtic = etichette[test_index, :, :, :]
-    devData= data[dev_index,:,:,:]
-    devEtic= etichette[dev_index,:,:,:]
-    for g, (t_index,val_index) in enumerate(kf.split(devData)):
-      tData= devData[t_index,:,:,:]
-      tEtic= etichette[t_index,:,:,:]
-      valData = devData[val_index, :, :, :]
-      valEtic = etichette[val_index, :, :, :]
-      
-      valData, valEtic = shuffle(devData[val_index, :, :, :], etichette[val_index, :, :, :])
-
-
-    dice_c = np.empty(len(test_index))
-
-    
-
-    trainData, trainMasks = shuffle(data[dev_index, :, :, :], masks[train_index, :, :, :])
 
     model = model_fun(data.shape[1:])
     model.compile(optimizer=Adam(0.001), loss=binary_crossentropy, metrics=['accuracy'])
