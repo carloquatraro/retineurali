@@ -56,8 +56,7 @@ def easy_cnn(input_shape):
 
     return model
 
-def cross_valid(model_fun,N_folds,data,masks,loss,names):
-    N_folds = 10
+def cross_valid(model_fun,N_folds,data,masks,dice_coef,h):
     kf = KFold(n_splits=N_folds, shuffle=True)
 
     results = []
@@ -67,6 +66,8 @@ def cross_valid(model_fun,N_folds,data,masks,loss,names):
         testData = data[test_index, :, :, :]
         testMasks = masks[test_index, :, :, :]
 
+        # trainData = data[train_index, :, :, :]
+        # trainMasks = masks[train_index, :, :, :]
         trainData, trainMasks =shuffle( data[train_index, :, :, :],masks[train_index, :, :, :])
 
         model = model_fun(data.shape[1:])
@@ -75,7 +76,7 @@ def cross_valid(model_fun,N_folds,data,masks,loss,names):
         history = model.fit(trainData, trainMasks, batch_size=h["batch_size"], epochs=h["epochs"], validation_split=h["validation_split"],verbose=1)
 
         for n in range(len(test_index)):
-            est_mask = np.squeeze(model.predict(testData[n, :, :, :][None, ...]) > 0.7)
+            est_mask = np.squeeze(model.predict(testData[n, :, :, :][None, ...]) > 0.5)
             dice_c[n] = dice_coef(tf.convert_to_tensor(testMasks[n, :, :, 0].astype(np.float32)),tf.convert_to_tensor(est_mask.astype(np.float32)))
 
         results.append(np.mean(dice_c))

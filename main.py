@@ -77,7 +77,7 @@ X_dataresized = np.empty((3*N,128,128,1))
 y_dataresized = np.empty((3*N,128,128,1))
 
 # Creazione X_dataresized
-X_dataresize=resize_images(X_data, target_size,iteratore,3*N)
+X_dataresized=resize_images(X_data, target_size,iteratore,3*N)
 print(X_dataresized.shape)
 
 '''
@@ -114,17 +114,17 @@ model.summary()
 N_folds = 10
 hyperparams = {
     "batch_size":128,
-    "epochs":10,
+    "epochs":1,
     "validation_split":0.1,
 }
-results = cross_valid(model,N_folds,X_dataresized,y_dataresized,dice_coef,hyperparams)
-
+results = cross_valid(easy_cnn,N_folds,X_dataresized,y_dataresized,dice_coef,hyperparams)
+"""
 nclassi = 3
 COVID=np.zeros(N)
 Normal=np.ones(N)
 ViralPneumonia=2*np.ones(N)
 etichette = np.concatenate((COVID,Normal,ViralPneumonia),axis=0)
-
+"""
 '''
 def cross_valid(model_fun, N_folds, data, masks, loss, names):
   N_folds = 10
@@ -166,4 +166,10 @@ def cross_valid(model_fun, N_folds, data, masks, loss, names):
     print(np.mean(dice_c))
     del model, trainData, trainMasks, testData, testMasks, est_mask, history
   return results
+'''
+# esempio di nested k-fold cross validation
+'''
+Sviluppare un algoritmo per la classificazione di radiografie polmonari. I dati provengono da tre differenti classi : covid, infezione polmonare (non covid), sano.
+L'algoritmo deve essere validato in Nested  K- Fold Cross Validation.
+Mentre per la classificazione riportare i valori medi di Accuracy, Recall e Precision.
 '''
