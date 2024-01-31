@@ -105,8 +105,6 @@ plt.show()
 # Creazione del modello
 model = easy_cnn(X_dataresized.shape[1:])
 
-model.compile(optimizer=Adam(0.001), loss=binary_crossentropy, metrics=['accuracy'])
-
 #Print the summary of the model architecture
 model.summary()
 
@@ -114,42 +112,28 @@ model.summary()
 N_folds = 10
 hyperparams = {
     "batch_size":128,
-    "epochs":1,
+    "epochs":10,
     "validation_split":0.1,
 }
-results = cross_valid(easy_cnn,N_folds,X_dataresized,y_dataresized,dice_coef,hyperparams)
-"""
+
+results = cross_valid(easy_cnn,N_folds,X_dataresized,y_dataresized,binary_crossentropy,hyperparams)
+''' 
 nclassi = 3
 COVID=np.zeros(N)
 Normal=np.ones(N)
 ViralPneumonia=2*np.ones(N)
 etichette = np.concatenate((COVID,Normal,ViralPneumonia),axis=0)
-"""
 '''
-def cross_valid(model_fun, N_folds, data, masks, loss, names):
-  N_folds = 10
-  kf = KFold(n_splits=N_folds, shuffle=True)
-
-  results = []
-  for f, (dev_index, test_index) in enumerate(kf.split(data)):
-    testData = data[test_index, :, :, :]
-    testEtic = etichette[test_index, :, :, :]
-    devData= data[dev_index,:,:,:]
-    devEtic= etichette[dev_index,:,:,:]
-    for g, (t_index,val_index) in enumerate(kf.split(devData)):
-      tData= devData[t_index,:,:,:]
-      tEtic= etichette[t_index,:,:,:]
-      valData = devData[val_index, :, :, :]
-      valEtic = etichette[val_index, :, :, :]
-      
-      valData, valEtic = shuffle(devData[val_index, :, :, :], etichette[val_index, :, :, :])
 
 
-    dice_c = np.empty(len(test_index))
 
-    
 
-    trainData, trainMasks = shuffle(data[dev_index, :, :, :], masks[train_index, :, :, :])
+
+
+
+
+
+'''
 
     model = model_fun(data.shape[1:])
     model.compile(optimizer=Adam(0.001), loss=binary_crossentropy, metrics=['accuracy'])
@@ -166,10 +150,4 @@ def cross_valid(model_fun, N_folds, data, masks, loss, names):
     print(np.mean(dice_c))
     del model, trainData, trainMasks, testData, testMasks, est_mask, history
   return results
-'''
-# esempio di nested k-fold cross validation
-'''
-Sviluppare un algoritmo per la classificazione di radiografie polmonari. I dati provengono da tre differenti classi : covid, infezione polmonare (non covid), sano.
-L'algoritmo deve essere validato in Nested  K- Fold Cross Validation.
-Mentre per la classificazione riportare i valori medi di Accuracy, Recall e Precision.
 '''
