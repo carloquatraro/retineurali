@@ -117,14 +117,15 @@ hyperparams = {
 }
 
 results = cross_valid(easy_cnn,N_folds,X_dataresized,y_dataresized,hyperparams)
-''' 
+
 nclassi = 3
 COVID=np.zeros(N)
 Normal=np.ones(N)
 ViralPneumonia=2*np.ones(N)
 etichette = np.concatenate((COVID,Normal,ViralPneumonia),axis=0)
-'''
 
+best_results = Ncross_valid(easy_cnn, X_dataresized, etichette)
+best_accuracy = np.max(best_results)
 
 
 

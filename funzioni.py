@@ -9,6 +9,7 @@ from sklearn.utils import shuffle
 from keras.optimizers import Adam
 from keras.losses import binary_crossentropy, sparse_categorical_crossentropy
 from sklearn.model_selection import KFold
+from sklearn.metrics import accuracy_score,precision_score,recall_score
 
 def resize_images(X_data, target_size:tuple,iteratore:list, N:int):
     X_dataresized = np.empty((N, target_size[0], target_size[1], 1))
@@ -120,8 +121,11 @@ def Ncross_valid(model_fun, data, masks):
         model.compile(optimizer=Adam(best_params['learning_rate']), loss=sparse_categorical_crossentropy, metrics=['accuracy']) 
         model.fit(testData, testEtic, batch_size=best_params['batch_size'], epochs=10, validation_split=0.1,verbose=1)
         score = model.evaluate(devData, devEtic, verbose=0)
-
-    results.append(score[1])
+        # precision = precision_score(devEtic, model.predict(devData))
+        # recall = recall_score(devEtic, model.predict(devData))
+        # results.append(score[1],precision,recall)
+        results.append(score[1])
+    return results
 
          
             
