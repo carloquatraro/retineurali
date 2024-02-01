@@ -71,12 +71,15 @@ def classification_cnn(input_shape):
     model_c = Sequential()
     model_c.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
     model_c.add(MaxPooling2D(pool_size=(2, 2)))
+    model_c.add.Dropout(0.1)
     model_c.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
     model_c.add(MaxPooling2D(pool_size=(2, 2)))
     model_c.add(Flatten())
+    model_c.add.Dropout(0.1)
     model_c.add(Dense(256, activation='relu'))
     model_c.add(Dense(128, activation='relu'))
     model_c.add(Dense(3, activation='sigmoid'))
+    model_c.add.Dropout(0.1)
     return model_c
 
 
