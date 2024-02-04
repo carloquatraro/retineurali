@@ -112,6 +112,7 @@ plt.axis('off')
 plt.show()
 '''
 
+
 # Creazione del modello per segmentazione e print del suo summary
 model = easy_cnn(X_dataresized.shape[1:])
 model.summary()
@@ -125,7 +126,8 @@ hyperparams = {
 }
 
 # Segmentazione
-results = cross_valid(easy_cnn,N_folds,X_dataresized,y_dataresized,hyperparams)
+results = cross_valid(easy_cnn,N_folds,X_dataresized,y_dataresized,hyperparams) 
+
 
 # Creazione del modello per classificazione e print del suo summary
 model_c = classification_cnn(X_dataresized.shape[1:])
